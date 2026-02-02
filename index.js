@@ -56,8 +56,8 @@ async function runBot() {
     
     // On encode le prompt pour l'URL
     const encodedPrompt = encodeURIComponent(promptGenere);
-    // On ajoute des paramètres de qualité et de taille
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&seed=${Math.floor(Math.random() * 1000)}`;
+    // On ajoute des paramètres de qualité et de taille + nologo
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&seed=${Math.floor(Math.random() * 1000)}&nologo=true`;
 
     const imageResponse = await axios.get(imageUrl, { 
       responseType: 'arraybuffer',
