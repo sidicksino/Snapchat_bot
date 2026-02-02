@@ -12,17 +12,37 @@ async function runBot() {
 
   try {
     // 1. Génération du Prompt via Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest"});
     
-    // Sujets Tech aléatoires
-    const topics = ['React Component', 'Server Room', 'Cyberpunk Hacker', 'Code Editor', 'API Network'];
+    // Sujets Tech & Abstract "Senior/High-End"
+    const topics = [
+      'Abstract Glassmorphism Data Flow', 
+      'Cyberpunk Workstation Isometric', 
+      'Bioluminescent AI Neural Network', 
+      'Futuristic Quantum Server Room', 
+      'Hyper-realistic Mechanical Eye',
+      'Floating Anti-Gravity Gadgets',
+      'Neon-Noir Cityscape Reflection',
+      'Minimalist Bauhaus Tech Product'
+    ];
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
 
     const promptInstruction = `
-      Tu es un directeur artistique 3D (style Apple).
-      Génère un PROMPT EN ANGLAIS pour une image 3D photoréaliste sur le thème : "${randomTopic}".
-      Style : Octane Render, Unreal Engine 5, Minimalist, Glassmorphism, 8k.
-      Réponds UNIQUEMENT avec le prompt anglais.
+      Agis comme un Directeur Artistique Senior spécialisé dans le design 3D haut de gamme (tendance Awwwards / Apple / Behance).
+      
+      TA MISSION :
+      Génère un PROMPT DE GÉNÉRATION D'IMAGE (pour Midjourney/DALL-E 3) EXTRÊMEMENT DÉTAILLÉ et "Senior" sur le thème : "${randomTopic}".
+      
+      STRUCTURE DU PROMPT ATTENDUE (en Anglais) :
+      [Sujet Principal] + [Détails de l'environnement] + [Éclairage & Ambiance] + [Matériaux & Textures] + [Angle de caméra] + [Moteur de rendu & Style].
+      
+      INCLURE OBLIGATOIREMENT CES MOTS-CLÉS DANS LE PROMPT :
+      "Octane Render, Unreal Engine 5, 8k Resolution, Ray Tracing, Volumetric Lighting, Photorealistic, Extremely Detailed, Depth of Field, Masterpiece, Trending on ArtStation".
+      
+      Pour le style, vise : Minimalist, Clean, High-Tech, Cinematic.
+      
+      RÉPONSE :
+      Donne UNIQUEMENT le prompt en anglais brut, sans guillemets, sans introduction.
     `;
 
     const result = await model.generateContent(promptInstruction);
