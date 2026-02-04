@@ -57,6 +57,10 @@ async function runBot() {
 
     // 2. Génération de l'image (Via Hugging Face API - Flux.1-Schnell)
     console.log("🎨 Génération de l'image via Hugging Face (Flux.1-Schnell)...");
+
+    if (!process.env.HF_TOKEN) {
+        console.error("❌ ERREUR: HF_TOKEN est manquant ! Vérifiez les 'Secrets' GitHub.");
+    }
     
     let buffer = null;
     let attempts = 0;
@@ -74,10 +78,10 @@ async function runBot() {
                     headers: { 
                         Authorization: `Bearer ${process.env.HF_TOKEN}`,
                         "Content-Type": "application/json",
-                        "Accept": "image/png" // Explicitly request image
+                        "Accept": "image/png" 
                     },
                     responseType: 'arraybuffer',
-                    timeout: 90000 // 90s timeout
+                    timeout: 90000 
                 }
             );
             
@@ -86,31 +90,24 @@ async function runBot() {
             
         } catch (err) {
             let errorMsg = err.message;
-            let isLoading = false;
-            let waitTime = 5000;
+            let status = err.response ? err.response.status : "N/A";
 
             if (err.response) {
-                // If response is json error
                 try {
                      const jsonErr = JSON.parse(err.response.data.toString());
                      if (jsonErr.error) errorMsg = jsonErr.error;
-                     if (jsonErr.estimated_time) {
-                         isLoading = true;
-                         waitTime = jsonErr.estimated_time * 1000;
-                     }
-                } catch (e) { /* Content might be buffer not json */ }
+                } catch (e) { /* Content might be buffer */ }
             }
 
-            console.warn(`⚠️ Échec tentative ${attempts}: ${errorMsg}`);
+            console.warn(`⚠️ Échec tentative ${attempts} (Status: ${status}): ${errorMsg}`);
             
-            if (isLoading) {
-                 console.log(`⏳ Modèle en chargement... Attente de ${Math.ceil(waitTime/1000)}s`);
-                 await new Promise(r => setTimeout(r, waitTime));
-            } else {
-                 await new Promise(r => setTimeout(r, 5000));
+            // Fast fail on auth error
+            if (status === 401 || status === 403) {
+                 console.error("❌ ERREUR AUTHENTIFICATION: Vérifiez votre Token Hugging Face !");
+                 break; 
             }
 
-            if (attempts === maxAttempts) console.error("❌ Abandon génération image.");
+            await new Promise(r => setTimeout(r, 5000));
         }
     }
 
