@@ -54,28 +54,63 @@ async function runBot() {
     // 2. Génération de l'image (Via Pollinations.ai - Free & Unlimited)
     console.log("🎨 Génération de l'image via Pollinations.ai...");
     
-    // On encode le prompt pour l'URL
-    const encodedPrompt = encodeURIComponent(promptGenere);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&seed=${Math.floor(Math.random() * 1000)}&nologo=true`;
 
+    // 2. Génération de l'image (Via Hugging Face API - Flux.1-Schnell)
+    console.log("🎨 Génération de l'image via Hugging Face (Flux.1-Schnell)...");
+    
     let buffer = null;
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5; // HF loading needs retries
 
     while (attempts < maxAttempts && !buffer) {
         try {
             attempts++;
             console.log(`🔹 Tentative ${attempts}/${maxAttempts}...`);
-            const imageResponse = await axios.get(imageUrl, { 
-                responseType: 'arraybuffer',
-                timeout: 60000 
-            });
-            buffer = Buffer.from(imageResponse.data, 'binary');
+            
+            const response = await axios.post(
+                "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+                { inputs: promptGenere },
+                {
+                    headers: { 
+                        Authorization: `Bearer ${process.env.HF_TOKEN}`,
+                        "Content-Type": "application/json",
+                        "Accept": "image/png" // Explicitly request image
+                    },
+                    responseType: 'arraybuffer',
+                    timeout: 90000 // 90s timeout
+                }
+            );
+            
+            buffer = Buffer.from(response.data, 'binary');
             console.log("✅ Image générée !");
+            
         } catch (err) {
-            console.warn(`⚠️ Échec tentative ${attempts}:`, err.message);
+            let errorMsg = err.message;
+            let isLoading = false;
+            let waitTime = 5000;
+
+            if (err.response) {
+                // If response is json error
+                try {
+                     const jsonErr = JSON.parse(err.response.data.toString());
+                     if (jsonErr.error) errorMsg = jsonErr.error;
+                     if (jsonErr.estimated_time) {
+                         isLoading = true;
+                         waitTime = jsonErr.estimated_time * 1000;
+                     }
+                } catch (e) { /* Content might be buffer not json */ }
+            }
+
+            console.warn(`⚠️ Échec tentative ${attempts}: ${errorMsg}`);
+            
+            if (isLoading) {
+                 console.log(`⏳ Modèle en chargement... Attente de ${Math.ceil(waitTime/1000)}s`);
+                 await new Promise(r => setTimeout(r, waitTime));
+            } else {
+                 await new Promise(r => setTimeout(r, 5000));
+            }
+
             if (attempts === maxAttempts) console.error("❌ Abandon génération image.");
-            await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
         }
     }
 
@@ -98,7 +133,7 @@ async function runBot() {
 👇 **Prompt Utilisé :**
 \`${safePrompt}\`
 
-_Généré par Gemini & Pollinations_
+_Généré par Gemini & Hugging Face_
         `);
         form.append('parse_mode', 'Markdown');
         form.append('photo', buffer, { filename: 'image.png' });
