@@ -56,27 +56,41 @@ async function runBot() {
     
     // On encode le prompt pour l'URL
     const encodedPrompt = encodeURIComponent(promptGenere);
-    // On ajoute des paramètres de qualité et de taille + nologo
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&seed=${Math.floor(Math.random() * 1000)}&nologo=true`;
 
-    const imageResponse = await axios.get(imageUrl, { 
-      responseType: 'arraybuffer',
-      timeout: 60000 // 60 seconds timeout for high-quality generation
-    });
-    const buffer = Buffer.from(imageResponse.data, 'binary');
-    
-    console.log("✅ Image générée !");
+    let buffer = null;
+    let attempts = 0;
+    const maxAttempts = 3;
 
+    while (attempts < maxAttempts && !buffer) {
+        try {
+            attempts++;
+            console.log(`🔹 Tentative ${attempts}/${maxAttempts}...`);
+            const imageResponse = await axios.get(imageUrl, { 
+                responseType: 'arraybuffer',
+                timeout: 60000 
+            });
+            buffer = Buffer.from(imageResponse.data, 'binary');
+            console.log("✅ Image générée !");
+        } catch (err) {
+            console.warn(`⚠️ Échec tentative ${attempts}:`, err.message);
+            if (attempts === maxAttempts) console.error("❌ Abandon génération image.");
+            await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+        }
+    }
 
-    // 3. Envoi sur Telegram (Photo)
+    // 3. Envoi sur Telegram
     const FormData = require('form-data');
-    const form = new FormData();
-    form.append('chat_id', telegramChatId);
+    const telegramUrlBase = `https://api.telegram.org/bot${telegramToken}`;
     
-    // Truncate prompt if too long for Telegram caption (limit is 1024 chars usually)
+    // Truncate prompt for caption
     const safePrompt = promptGenere.length > 800 ? promptGenere.substring(0, 800) + "..." : promptGenere;
 
-    form.append('caption', `
+    if (buffer) {
+        // Mode PHOTO
+        const form = new FormData();
+        form.append('chat_id', telegramChatId);
+        form.append('caption', `
 🚀 **Ton Défi Snap 3D**
 
 🎨 **Sujet :** ${randomTopic}
@@ -85,20 +99,50 @@ async function runBot() {
 \`${safePrompt}\`
 
 _Généré par Gemini & Pollinations_
-    `);
-    form.append('parse_mode', 'Markdown');
-    form.append('photo', buffer, { filename: 'image.png' });
+        `);
+        form.append('parse_mode', 'Markdown');
+        form.append('photo', buffer, { filename: 'image.png' });
 
-    const telegramUrl = `https://api.telegram.org/bot${telegramToken}/sendPhoto`;
+        await axios.post(`${telegramUrlBase}/sendPhoto`, form, {
+            headers: form.getHeaders()
+        });
+        console.log("✅ Photo envoyée sur Telegram !");
+    } else {
+        // Mode TEXTE (Fallback)
+        console.log("⚠️ Passage en mode TEXTE seul (Erreur Image).");
+        const message = `
+🚀 **Ton Défi Snap 3D** (Mode Texte)
 
-    await axios.post(telegramUrl, form, {
-      headers: form.getHeaders()
-    });
+🎨 **Sujet :** ${randomTopic}
 
-    console.log("✅ Photo envoyée sur Telegram !");
+⚠️ _Impossible de générer l'image (Service indisponible)._
+
+👇 **Copie ce prompt pour Bing/DALL-E :**
+\`${safePrompt}\`
+
+_Généré par Gemini_
+        `;
+        
+        await axios.post(`${telegramUrlBase}/sendMessage`, {
+            chat_id: telegramChatId,
+            text: message,
+            parse_mode: 'Markdown'
+        });
+        console.log("✅ Message Texte envoyé (Fallback) !");
+    }
 
   } catch (error) {
-    console.error("❌ Erreur :", error.response ? error.response.data : error.message);
+    // Better Error Logging
+    let errMsg = error.message;
+    if (error.response && error.response.data) {
+        // Try to convert buffer to string if it's a buffer
+        if (Buffer.isBuffer(error.response.data)) {
+            errMsg = error.response.data.toString('utf8');
+        } else {
+            errMsg = JSON.stringify(error.response.data);
+        }
+    }
+    console.error("❌ Erreur Fatale :", errMsg);
     process.exit(1);
   }
 }
