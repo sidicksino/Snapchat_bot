@@ -45,9 +45,34 @@ async function runBot() {
       Donne UNIQUEMENT le prompt en anglais brut, sans guillemets, sans introduction.
     `;
 
-    const result = await model.generateContent(promptInstruction);
-    const promptGenere = result.response.text().trim();
-    console.log("Prompt généré :", promptGenere);
+    let promptGenere = null;
+    let geminiAttempts = 0;
+    const maxGeminiAttempts = 5;
+
+    while (geminiAttempts < maxGeminiAttempts && !promptGenere) {
+        try {
+            geminiAttempts++;
+            if (geminiAttempts > 1) {
+                console.log(`🔹 Nouvelle tentative Gemini ${geminiAttempts}/${maxGeminiAttempts}...`);
+            }
+            const result = await model.generateContent(promptInstruction);
+            promptGenere = result.response.text().trim();
+            console.log("✅ Prompt généré :", promptGenere);
+        } catch (err) {
+            let errorMsg = err.message;
+            let status = err.status || (err.response ? err.response.status : "N/A");
+
+            console.warn(`⚠️ Échec tentative Gemini ${geminiAttempts} (Status: ${status}): ${errorMsg}`);
+            
+            if (geminiAttempts === maxGeminiAttempts) {
+                throw err; // Re-throw if all attempts fail
+            }
+
+            // Wait with exponential backoff: 5s, 10s, 20s, 40s
+            const waitTime = Math.pow(2, geminiAttempts - 1) * 5000;
+            await new Promise(r => setTimeout(r, waitTime));
+        }
+    }
 
 
 
