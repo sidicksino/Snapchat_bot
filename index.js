@@ -161,7 +161,8 @@ Return only the prompt in English.
                 console.log("✅ Image generated");
                 break;
 
-            } catch {
+            } catch (imageErr) {
+                console.warn(`🔹 Image generation attempt ${i + 1} failed: ${imageErr.message}`);
                 await new Promise(r => setTimeout(r, 5000));
             }
         }
