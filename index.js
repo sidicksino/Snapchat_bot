@@ -8,37 +8,55 @@ const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 const telegramChatId = process.env.TELEGRAM_CHAT_ID;
 
 async function runBot() {
-    console.log("💎 Luxury Snap Engine Started...");
+    console.log("💎 Smart Luxury Snap Engine Started...");
 
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-        // 🔥 LUXURY CONTENT ENGINE
+        // 🧠 SCENE SYSTEM (WITH TIME TYPES)
         const scenes = [
-            'luxury hotel lobby at night',
-            'high-end penthouse interior with skyline view',
-            'rainy neon luxury city street',
-            'minimalist luxury bedroom morning light',
-            'rooftop infinity pool overlooking city',
-            'luxury shopping mall with reflections',
-            'wide cinematic bridge road at sunset',
-            'underground luxury parking with supercars'
+            { name: 'luxury hotel lobby at night', type: 'night' },
+            { name: 'rainy neon luxury city street', type: 'night' },
+            { name: 'underground luxury parking with supercars', type: 'night' },
+
+            { name: 'high-end penthouse interior with skyline view', type: 'day' },
+            { name: 'minimalist luxury bedroom with large windows', type: 'day' },
+            { name: 'luxury shopping mall with glass reflections', type: 'day' },
+
+            { name: 'rooftop infinity pool overlooking city skyline', type: 'sunset' },
+            { name: 'wide cinematic bridge road', type: 'sunset' }
         ];
+
+        const lightingMap = {
+            day: [
+                'soft natural daylight through large windows',
+                'bright diffused daylight',
+                'clean sunlight with soft shadows'
+            ],
+            night: [
+                'warm ambient artificial lighting',
+                'neon reflections on wet surfaces',
+                'low cinematic lighting with soft glow'
+            ],
+            sunset: [
+                'golden hour sunlight',
+                'warm sunset glow',
+                'orange and pink sky reflections'
+            ]
+        };
+
+        const weatherMap = {
+            day: ['clear sky', 'slightly cloudy', 'bright clean air'],
+            night: ['clear night', 'rainy atmosphere with reflections', 'light fog'],
+            sunset: ['warm clear sunset', 'soft cloudy sunset', 'slight haze']
+        };
 
         const moods = [
-            'quiet late night energy',
-            'soft peaceful morning',
+            'quiet and peaceful',
             'slightly lonely but calm',
             'private luxury moment',
-            'dreamy cinematic silence'
-        ];
-
-        const lightingStyles = [
-            'warm golden hour light',
-            'soft diffused ambient lighting',
-            'neon reflections on wet ground',
-            'cool cinematic blue tones',
-            'sunset glow with shadows'
+            'cinematic silence',
+            'soft emotional atmosphere'
         ];
 
         const cameraStyles = [
@@ -49,50 +67,64 @@ async function runBot() {
             'soft background blur'
         ];
 
-        const randomScene = scenes[Math.floor(Math.random() * scenes.length)];
+        // 🎯 SELECT SMARTLY
+        const selectedScene = scenes[Math.floor(Math.random() * scenes.length)];
+
+        const randomLight =
+            lightingMap[selectedScene.type][
+            Math.floor(Math.random() * lightingMap[selectedScene.type].length)
+            ];
+
+        const randomWeather =
+            weatherMap[selectedScene.type][
+            Math.floor(Math.random() * weatherMap[selectedScene.type].length)
+            ];
+
         const randomMood = moods[Math.floor(Math.random() * moods.length)];
-        const randomLight = lightingStyles[Math.floor(Math.random() * lightingStyles.length)];
         const randomCamera = cameraStyles[Math.floor(Math.random() * cameraStyles.length)];
 
-        // 🧠 ADVANCED PROMPT (ANTI-AI LOOK)
+        // 🧠 ADVANCED PROMPT
         const promptInstruction = `
-Act as a top-tier cinematic photographer and luxury visual director.
+Act as a professional luxury photographer.
 
-Create a HIGH-END, ultra realistic image generation prompt.
-
-GOAL:
-Make the image look like a real photo taken in a luxury environment, not AI generated.
+Create an ultra realistic image prompt.
 
 SCENE:
-${randomScene}
+${selectedScene.name}
 
-MOOD:
-${randomMood}
+TIME:
+${selectedScene.type}
 
 LIGHTING:
 ${randomLight}
 
+WEATHER:
+${randomWeather}
+
+MOOD:
+${randomMood}
+
 CAMERA:
 ${randomCamera}
 
-STRICT RULES:
-- Ultra realistic photography (NOT 3D render style)
-- Use real-world imperfections (slight blur, grain, reflections)
-- Natural lighting behavior
-- Clean composition, minimal clutter
-- Materials must feel real: marble, glass, polished metal
-- Include depth and atmosphere
-- Avoid futuristic sci-fi overload
+RULES:
+- Must look like real photography, NOT AI
+- Physically correct lighting and time of day
+- Natural imperfections (grain, reflections, shadows)
+- Clean luxury composition
+- Real materials: glass, marble, polished metal
+- Depth and atmosphere are important
 
-KEYWORDS TO INCLUDE:
-photorealistic, cinematic lighting, 8k, realistic textures, natural shadows, subtle reflections, depth of field
+KEYWORDS:
+photorealistic, cinematic lighting, 8k, depth of field, realistic textures, natural shadows
 
 OUTPUT:
-Return ONLY the final prompt in English.
+Return only the prompt in English.
 `;
 
-        // 🔁 Generate Prompt
+        // 🔁 GENERATE PROMPT
         let promptGenere = null;
+
         for (let i = 0; i < 5; i++) {
             try {
                 const result = await model.generateContent(promptInstruction);
@@ -104,9 +136,9 @@ Return ONLY the final prompt in English.
             }
         }
 
-        if (!promptGenere) throw new Error("Prompt generation failed");
+        if (!promptGenere) throw new Error("Prompt failed");
 
-        // 🎨 Generate Image
+        // 🎨 GENERATE IMAGE
         let buffer = null;
 
         for (let i = 0; i < 5; i++) {
@@ -136,71 +168,75 @@ Return ONLY the final prompt in English.
 
         const telegramUrl = `https://api.telegram.org/bot${telegramToken}`;
 
-        // 🧠 HUMAN SNAP CAPTIONS (Generated by Gemini)
+        // 🧠 HUMAN CAPTION
         const captionInstruction = `
-Act like a real Snapchat user.
+Write a short Snapchat caption (max 6 words).
 
-Write a SHORT caption (max 6 words).
 Style:
-- lowercase only
-- no punctuation except emojis
-- emotional, natural, human
-- not motivational quotes
-- not AI sounding
-- feels like texting a friend
+- lowercase
+- human, emotional, natural
+- no quotes, no explanation
 
 Examples:
-"this feels different 🖤"
+"this feels unreal"
 "late nights like this"
 "one day fr"
-"i need this life"
-"peace like this hits"
 
-Only output the caption.
+Output only caption.
 `;
 
-        let caption = "this feels different 🖤";
+        let caption = "this feels unreal";
 
         try {
             const result = await model.generateContent(captionInstruction);
             caption = result.response.text().trim();
         } catch { }
 
-        const safePrompt = promptGenere.length > 800
-            ? promptGenere.substring(0, 800) + "..."
-            : promptGenere;
+        const safePrompt =
+            promptGenere.length > 800
+                ? promptGenere.substring(0, 800) + "..."
+                : promptGenere;
 
         if (buffer) {
-            // 📸 SEND IMAGE (CLEAN)
+            // 📸 SEND IMAGE
             const form = new FormData();
             form.append('chat_id', telegramChatId);
             form.append('caption', caption);
             form.append('photo', buffer, { filename: 'luxury.png' });
 
-            await axios.post(`${telegramUrl}/sendPhoto`, form, {
-                headers: form.getHeaders()
-            });
+            try {
+                await axios.post(`${telegramUrl}/sendPhoto`, form, {
+                    headers: form.getHeaders()
+                });
+                console.log("🚀 Image sent");
 
-            console.log("🚀 Image sent");
-
-            // 🧠 SEND PROMPT (SEPARATE MESSAGE)
-            await axios.post(`${telegramUrl}/sendMessage`, {
-                chat_id: telegramChatId,
-                text: `🧠 Prompt:\n\`${safePrompt}\``,
-                parse_mode: 'Markdown'
-            });
-
-            console.log("🧠 Prompt sent");
+                // 🧠 SEND PROMPT
+                await axios.post(`${telegramUrl}/sendMessage`, {
+                    chat_id: telegramChatId,
+                    text: `🧠 Prompt:\n\`${safePrompt}\``,
+                    parse_mode: 'Markdown'
+                });
+            } catch (telegramErr) {
+                console.error("❌ Telegram Send Error:", telegramErr.message);
+            }
 
         } else {
-            await axios.post(`${telegramUrl}/sendMessage`, {
-                chat_id: telegramChatId,
-                text: `⚠️ Image failed\n\n${safePrompt}`
-            });
+            console.log("⚠️ Image generation failed after 5 attempts. Sending failure notice...");
+            try {
+                await axios.post(`${telegramUrl}/sendMessage`, {
+                    chat_id: telegramChatId,
+                    text: `⚠️ Image failed\n\n${safePrompt}`
+                });
+            } catch (telegramErr) {
+                console.error("❌ Telegram Send Error:", telegramErr.message);
+            }
         }
 
     } catch (err) {
-        console.error("❌ Error:", err.message);
+        console.error("❌ Fatal Error:", err.message);
+        if (err.response) {
+            console.error("Response data:", err.response.data.toString());
+        }
     }
 }
 
