@@ -241,4 +241,22 @@ Output only caption.
     }
 }
 
-runBot();
+async function startSmartSession(maxRuns = 3) {
+    console.log(`\n🚀 Smart Session Started: ${maxRuns} snaps scheduled.`);
+
+    for (let i = 1; i <= maxRuns; i++) {
+        console.log(`\n📸 --- SNAP ${i} / ${maxRuns} ---`);
+        await runBot();
+
+        if (i < maxRuns) {
+            // Random delay between 1 and 3 minutes
+            const waitTime = Math.floor(Math.random() * (180000 - 60000 + 1) + 60000);
+            console.log(`⏳ Sleeping for ${Math.round(waitTime / 1000 / 60 * 10) / 10} minutes...`);
+            await new Promise(r => setTimeout(r, waitTime));
+        }
+    }
+
+    console.log("\n✅ Smart Session Finished. See you later!");
+}
+
+startSmartSession(3);
