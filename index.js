@@ -259,4 +259,4 @@ async function startSmartSession(maxRuns = 3) {
     console.log("\n✅ Smart Session Finished. See you later!");
 }
 
-startSmartSession(3);
+startSmartSession(1);
